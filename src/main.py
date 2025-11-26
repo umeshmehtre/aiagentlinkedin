@@ -1,6 +1,4 @@
-import os
 import torch
-from datetime import datetime
 from loguru import logger
 
 from rss_agent import get_articles_from_rss
@@ -10,7 +8,7 @@ from publisher import publish
 from sources import RSS_SOURCES
 
 # ---------------------------
-#  DEVICE CONFIG
+# DEVICE CONFIG
 # ---------------------------
 if torch.cuda.is_available():
     device = "cuda"
@@ -22,16 +20,6 @@ else:
 print(f"Device set to use {device}")
 
 # ---------------------------
-# LINKEDIN SECRETS FROM ENV
-# ---------------------------
-LINKEDIN_ACCESS_TOKEN = os.getenv("LINKEDIN_ACCESS_TOKEN")
-LINKEDIN_PERSON_URN = os.getenv("LINKEDIN_PERSON_URN")
-
-if not LINKEDIN_ACCESS_TOKEN or not LINKEDIN_PERSON_URN:
-    logger.error("LinkedIn secrets missing. Set them in GitHub Actions secrets.")
-    raise SystemExit
-
-# ---------------------------
 # MAIN DAILY AGENT
 # ---------------------------
 def run():
@@ -41,11 +29,12 @@ def run():
 
     for rss_url in RSS_SOURCES:
         try:
-            articles = get_articles_from_rss(rss_url, days_filter=30)
+            # Fetch articles from the last 30 days
+            articles = get_articles_from_rss(rss_url)
             if articles:
                 collected_articles.extend(articles)
         except Exception as e:
-            logger.error(f"RSS read error from {rss_url}: {e}")
+            logger.error(f"RSS read error from {rss_url}: {str(e)}")
             continue
 
     if not collected_articles:
@@ -62,7 +51,7 @@ def run():
     logger.info(f"Selected fresh AI article: {title_raw}")
 
     # ---------------------------
-    # SUMMARIZATION
+    # SUMMARIZER PIPELINE
     # ---------------------------
     try:
         title = generate_title(content_raw)
@@ -74,18 +63,13 @@ def run():
         summary = content_raw[:400] + "..."
         insight = "This update highlights a notable development in the AI ecosystem."
 
-    # Format final LinkedIn post
+    # Format LinkedIn-ready post
     post_text = build_post(title, summary, insight, url)
 
     # ---------------------------
     # PUBLISH TO LINKEDIN
     # ---------------------------
     try:
-        publish(post_text, access_token=LINKEDIN_ACCESS_TOKEN, person_urn=LINKEDIN_PERSON_URN)
+        publish(post_text)
         logger.info("Published 1 daily AI post from RSS")
-    except Exception as e:
-        logger.error(f"Publishing failed: {e}")
-
-
-if __name__ == "__main__":
-    run()
+    except Exception
