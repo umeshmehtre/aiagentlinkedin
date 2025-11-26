@@ -1,6 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()
-
 import torch
 from datetime import datetime
 from loguru import logger
