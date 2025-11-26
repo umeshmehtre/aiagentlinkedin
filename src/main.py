@@ -1,3 +1,4 @@
+import os
 import torch
 from datetime import datetime
 from loguru import logger
@@ -7,7 +8,6 @@ from summarizer import generate_title, generate_summary, generate_insight
 from formatter import build_post
 from publisher import publish
 from sources import RSS_SOURCES
-
 
 # ---------------------------
 #  DEVICE CONFIG
@@ -21,14 +21,22 @@ else:
 
 print(f"Device set to use {device}")
 
+# ---------------------------
+# LINKEDIN SECRETS FROM ENV
+# ---------------------------
+LINKEDIN_ACCESS_TOKEN = os.getenv("LINKEDIN_ACCESS_TOKEN")
+LINKEDIN_PERSON_URN = os.getenv("LINKEDIN_PERSON_URN")
+
+if not LINKEDIN_ACCESS_TOKEN or not LINKEDIN_PERSON_URN:
+    logger.error("LinkedIn secrets missing. Set them in GitHub Actions secrets.")
+    raise SystemExit
 
 # ---------------------------
-#   MAIN DAILY AGENT
+# MAIN DAILY AGENT
 # ---------------------------
 def run():
     logger.info("Starting GitHub-safe Daily AI Insight Agent")
 
-    # Store articles collected across all sources
     collected_articles = []
 
     for rss_url in RSS_SOURCES:
@@ -37,7 +45,7 @@ def run():
             if articles:
                 collected_articles.extend(articles)
         except Exception as e:
-            logger.error(f"RSS read error from {rss_url}: {str(e)}")
+            logger.error(f"RSS read error from {rss_url}: {e}")
             continue
 
     if not collected_articles:
@@ -54,15 +62,14 @@ def run():
     logger.info(f"Selected fresh AI article: {title_raw}")
 
     # ---------------------------
-    #   SUMMARIZER PIPELINE
+    # SUMMARIZATION
     # ---------------------------
     try:
         title = generate_title(content_raw)
         summary = generate_summary(content_raw)
         insight = generate_insight(content_raw)
-
     except Exception as e:
-        logger.error(f"Summarization failure, using fallback title: {e}")
+        logger.error(f"Summarization failed, using fallback: {e}")
         title = title_raw
         summary = content_raw[:400] + "..."
         insight = "This update highlights a notable development in the AI ecosystem."
@@ -71,10 +78,10 @@ def run():
     post_text = build_post(title, summary, insight, url)
 
     # ---------------------------
-    #   PUBLISH TO LINKEDIN
+    # PUBLISH TO LINKEDIN
     # ---------------------------
     try:
-        publish(post_text)
+        publish(post_text, access_token=LINKEDIN_ACCESS_TOKEN, person_urn=LINKEDIN_PERSON_URN)
         logger.info("Published 1 daily AI post from RSS")
     except Exception as e:
         logger.error(f"Publishing failed: {e}")
