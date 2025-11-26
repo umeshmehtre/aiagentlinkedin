@@ -7,16 +7,11 @@ ACCESS_TOKEN = os.getenv("LINKEDIN_ACCESS_TOKEN")
 PERSON_URN_RAW = os.getenv("LINKEDIN_PERSON_URN")
 
 def normalize_person_urn(raw: str) -> str:
-    """
-    Accept numeric id or full urn and return numeric ID.
-    e.g. "urn:li:person:560872823" -> "560872823"
-    """
+    """Convert full URN to numeric ID if needed."""
     if not raw:
         return None
     m = re.search(r"(\d+)$", raw)
-    if m:
-        return m.group(1)
-    return raw
+    return m.group(1) if m else raw
 
 PERSON_URN = normalize_person_urn(PERSON_URN_RAW)
 

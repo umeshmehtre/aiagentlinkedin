@@ -29,7 +29,6 @@ def run():
 
     for rss_url in RSS_SOURCES:
         try:
-            # Fetch articles from the last 30 days
             articles = get_articles_from_rss(rss_url)
             if articles:
                 collected_articles.extend(articles)
@@ -72,4 +71,9 @@ def run():
     try:
         publish(post_text)
         logger.info("Published 1 daily AI post from RSS")
-    except Exception
+    except Exception as e:
+        logger.error(f"Publishing failed: {e}")
+
+
+if __name__ == "__main__":
+    run()
