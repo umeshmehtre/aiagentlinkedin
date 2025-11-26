@@ -1,21 +1,17 @@
 from datetime import datetime
 
 def build_post(title: str, summary: str, insight: str, url: str) -> str:
-    """
-    Format a polished, LinkedIn-ready AI news post.
-    Works together with summarizer.py.
-    """
-
+    """Format a clean LinkedIn-ready daily AI post without markdown bold."""
+    
     date_str = datetime.now().strftime("%d %b %Y").upper()
 
     post = f"""
 📅 DAILY AI INSIGHT — {date_str}
 
-🔹 **{title}**
+🔹 {title}
 
 {summary}
 
-**Why it matters:** {insight}
 
 🔗 Source: {url}
 
