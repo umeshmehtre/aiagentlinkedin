@@ -1,78 +1,48 @@
-import torch
+import os
 from loguru import logger
-
-from rss_agent import get_articles_from_rss
+from rss_agent import get_fresh_article
 from summarizer import generate_title, generate_summary, generate_insight
 from formatter import build_post
-from publisher import publish
-from sources import RSS_SOURCES
+from publisher import publish_to_linkedin
 
-# ---------------------------
-# DEVICE CONFIG
-# ---------------------------
-if torch.cuda.is_available():
-    device = "cuda"
-elif torch.backends.mps.is_available():
-    device = "mps"
-else:
-    device = "cpu"
 
-print(f"Device set to use {device}")
-
-# ---------------------------
-# MAIN DAILY AGENT
-# ---------------------------
 def run():
-    logger.info("Starting GitHub-safe Daily AI Insight Agent")
+    logger.info("Starting Daily AI Insight Agent")
 
-    collected_articles = []
-
-    for rss_url in RSS_SOURCES:
-        try:
-            articles = get_articles_from_rss(rss_url)
-            if articles:
-                collected_articles.extend(articles)
-        except Exception as e:
-            logger.error(f"RSS read error from {rss_url}: {str(e)}")
-            continue
-
-    if not collected_articles:
-        logger.error("No fresh AI article found today.")
+    # 1. Get trending fresh AI article
+    article = get_fresh_article()
+    if not article:
+        logger.error("No AI article found today.")
         return
 
-    # Pick the newest article
-    article = sorted(collected_articles, key=lambda x: x["published"], reverse=True)[0]
-
     title_raw = article["title"]
-    content_raw = article["summary"]
-    url = article["link"]
+    content = article["content"]
+    url = article["url"]
 
-    logger.info(f"Selected fresh AI article: {title_raw}")
+    logger.info(f"Selected article: {title_raw}")
 
-    # ---------------------------
-    # SUMMARIZER PIPELINE
-    # ---------------------------
-    try:
-        title = generate_title(content_raw)
-        summary = generate_summary(content_raw)
-        insight = generate_insight(content_raw)
-    except Exception as e:
-        logger.error(f"Summarization failed, using fallback: {e}")
-        title = title_raw
-        summary = content_raw[:400] + "..."
-        insight = "This update highlights a notable development in the AI ecosystem."
+    # 2. Generate clean AI insights
+    title = generate_title(content)
+    summary = generate_summary(content)
+    insight = generate_insight(content)
 
-    # Format LinkedIn-ready post
-    post_text = build_post(title, summary, insight, url)
+    # 3. Format LinkedIn-ready post
+    final_post = build_post(title, summary, insight, url)
 
-    # ---------------------------
-    # PUBLISH TO LINKEDIN
-    # ---------------------------
-    try:
-        publish(post_text)
-        logger.info("Published 1 daily AI post from RSS")
-    except Exception as e:
-        logger.error(f"Publishing failed: {e}")
+    print("\n----- Generated LinkedIn Post -----\n")
+    print(final_post)
+    print("\n----------------------------------\n")
+
+    # 4. Publish to LinkedIn only if secrets are available
+    access_token = os.getenv("LINKEDIN_ACCESS_TOKEN")
+    person_urn = os.getenv("LINKEDIN_PERSON_URN")
+
+    if not access_token or not person_urn:
+        logger.error("Missing LinkedIn secrets. Skipping publish.")
+        return
+
+    publish_to_linkedin(final_post, access_token, person_urn)
+    logger.info("Done!")
 
 
 if __name__ == "__main__":

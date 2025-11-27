@@ -1,7 +1,7 @@
 from transformers import pipeline
 from loguru import logger
 
-# Load once, shared across functions
+# Load globally
 try:
     summarizer = pipeline(
         "summarization",
@@ -9,36 +9,36 @@ try:
         device="cpu"
     )
 except Exception as e:
-    logger.error(f"Failed to load summarization model: {e}")
+    logger.error(f"Summarizer load failed: {e}")
     summarizer = None
 
 
 def generate_title(text: str) -> str:
-    """Generate an impactful, short, expert-level headline."""
+    """Generate a crisp, short expert headline."""
     if not summarizer:
-        return "AI Update"
+        return "AI Insight"
 
     try:
         result = summarizer(
-            f"Create a short, punchy, expert tech headline from this:\n{text}",
-            max_length=15,
+            text,
+            max_length=20,
             min_length=5,
             do_sample=False
         )[0]["summary_text"]
-        return result.strip()
+        return result.strip().replace(".", "")
     except Exception as e:
         logger.error(f"Title generation failed: {e}")
-        return "AI Insight"
+        return "AI Update"
 
 
 def generate_summary(text: str) -> str:
-    """Generate a smooth, human-quality 2–3 sentence expert summary."""
+    """Generate a clean 2–3 sentence expert summary."""
     if not summarizer:
         return text[:250]
 
     try:
         result = summarizer(
-            f"Summarize this into 2–3 crisp, expert-level sentences. No repetition:\n{text}",
+            text,
             max_length=130,
             min_length=60,
             do_sample=False
@@ -50,18 +50,19 @@ def generate_summary(text: str) -> str:
 
 
 def generate_insight(text: str) -> str:
-    """Generate 1 sentence explaining the significance of the article."""
+    """Generate one meaningful expert insight sentence."""
     if not summarizer:
         return ""
 
     try:
-        result = summarizer(
-            f"Explain in 1 sentence why this development matters for AI practitioners:\n{text}",
+        raw = summarizer(
+            text,
             max_length=40,
             min_length=20,
             do_sample=False
         )[0]["summary_text"]
-        return result.strip()
+
+        return f"This development matters because {raw.strip().lower()}."
     except Exception as e:
         logger.error(f"Insight generation failed: {e}")
         return ""
