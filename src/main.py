@@ -26,14 +26,14 @@ def run():
     rss_url = random.choice(RSS_SOURCES)
     logger.info(f"Selected RSS source: {rss_url}")
 
-    # Pull last 30 days of articles
+    # Fetch articles from last 30 days
     articles = get_articles_from_rss(rss_url, days=30)
 
     if not articles:
         logger.error("No articles fetched from RSS.")
         return
 
-    # Filter to AI specific articles only
+    # Filter only high-quality AI-related content
     ai_articles = [
         a for a in articles
         if is_ai_related(a["title"])
@@ -43,24 +43,22 @@ def run():
         logger.error("No AI-related articles found after filtering.")
         return
 
-    # Sort newest first
+    # NEWEST FIRST
     ai_articles.sort(key=lambda x: x["published"], reverse=True)
 
-    # Select top (newest) article
     selected = ai_articles[0]
     logger.info(f"Selected article: {selected['title']}")
 
-    # Extract fields
     title_raw = selected["title"]
     link = selected["link"]
     content = selected.get("content", title_raw)
 
-    # Generate enhanced title + summary + insight
+    # Generate title, summary, insight
     title = generate_title(title_raw)
     summary = generate_summary(content)
     insight = generate_insight(content)
 
-    # Build final LinkedIn-ready post
+    # Build final post
     post_text = build_post(title, summary, insight, link)
 
     # Publish on LinkedIn
