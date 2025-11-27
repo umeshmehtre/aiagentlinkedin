@@ -4,12 +4,13 @@ import requests
 import feedparser
 from datetime import datetime, timedelta
 from loguru import logger
+from dateutil import parser as date_parser
 
 
 def get_articles_from_rss(rss_url: str, days: int = 30):
     """
     Fetch articles from an RSS/Atom feed and return only those published
-    within the last X days. Guaranteed to work with GitHub Actions.
+    within the last X days. Fully compatible with ISO timestamps (Google Research).
     """
     try:
         response = requests.get(rss_url, timeout=10)
@@ -33,13 +34,27 @@ def get_articles_from_rss(rss_url: str, days: int = 30):
 
     for entry in feed.entries:
         try:
-            # Unified published date handling
+            # Priority: published_parsed → updated_parsed → ISO date strings
+            published = None
+
             if "published_parsed" in entry and entry.published_parsed:
                 published = datetime(*entry.published_parsed[:6])
+
             elif "updated_parsed" in entry and entry.updated_parsed:
                 published = datetime(*entry.updated_parsed[:6])
+
+            elif "published" in entry:
+                published = date_parser.parse(entry.published)
+
+            elif "updated" in entry:
+                published = date_parser.parse(entry.updated)
+
             else:
-                continue  # skip items without valid date
+                continue  # skip entries with no date
+
+            # Convert timezone-aware to UTC naive
+            if published.tzinfo is not None:
+                published = published.astimezone(tz=None).replace(tzinfo=None)
 
             if published < cutoff:
                 continue
