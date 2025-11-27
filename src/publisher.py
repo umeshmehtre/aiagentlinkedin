@@ -1,39 +1,54 @@
-import os
+# src/publisher.py
+
 import requests
 from loguru import logger
 
-ACCESS_TOKEN = os.getenv("LINKEDIN_ACCESS_TOKEN")
-PERSON_URN = os.getenv("LINKEDIN_PERSON_URN")  # must be full URN!
 
+def publish_to_linkedin(post_text: str, access_token: str, person_urn: str) -> bool:
+    """
+    Publish a simple text post to LinkedIn using the v2 UGC API.
+    """
 
-def publish_to_linkedin(text: str):
-    if not ACCESS_TOKEN or not PERSON_URN:
+    if not access_token or not person_urn:
         logger.error("Missing LinkedIn credentials.")
-        return
-
-    url = "https://api.linkedin.com/v2/ugcPosts"
+        return False
 
     headers = {
+        "Authorization": f"Bearer {access_token}",
         "X-Restli-Protocol-Version": "2.0.0",
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
 
     payload = {
-        "author": PERSON_URN,
+        "author": person_urn,          # must stay exactly this
         "lifecycleState": "PUBLISHED",
         "specificContent": {
             "com.linkedin.ugc.ShareContent": {
-                "shareCommentary": {"text": text},
+                "shareCommentary": {
+                    "text": post_text
+                },
                 "shareMediaCategory": "NONE"
             }
         },
-        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
+        "visibility": {
+            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+        }
     }
 
-    response = requests.post(url, json=payload, headers=headers)
+    url = "https://api.linkedin.com/v2/ugcPosts"
 
-    if response.status_code != 201:
-        logger.error(f"LinkedIn publish error: {response.status_code} - {response.text}")
-    else:
-        logger.info("Post published successfully!")
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=20)
+
+        if response.status_code in (200, 201):
+            logger.info("LinkedIn post published successfully.")
+            return True
+
+        logger.error(
+            f"LinkedIn publish error: {response.status_code} - {response.text}"
+        )
+        return False
+
+    except Exception as e:
+        logger.error(f"LinkedIn publish exception: {e}")
+        return False
