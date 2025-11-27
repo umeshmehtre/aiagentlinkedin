@@ -4,7 +4,6 @@ RSS_SOURCES = [
     "https://techcrunch.com/category/artificial-intelligence/feed/",
     "https://venturebeat.com/category/ai/feed/",
     "https://www.technologyreview.com/feed/",
-    "https://www.marktechpost.com/category/ai/feed/",
     "https://huggingface.co/blog/feed.xml",
     "https://blog.research.google/atom.xml",
     "https://www.analyticsvidhya.com/blog/feed/",

@@ -20,7 +20,7 @@ def run():
     PERSON_URN = os.getenv("LINKEDIN_PERSON_URN")
 
     if not ACCESS_TOKEN or not PERSON_URN:
-        logger.error("Missing LinkedIn credentials. Cannot publish.")
+        logger.warning("Missing LinkedIn credentials. Cannot publish.")
     
     # Pick a random RSS source
     rss_url = random.choice(RSS_SOURCES)
